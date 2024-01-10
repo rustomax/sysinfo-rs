@@ -1,0 +1,12 @@
+[package]
+name = "sysinfo-rs"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sysinfo = "0.30.5"
+local-ip-address = "0.5.6"
+serde = { version = "1.0.195", features = ["derive"] }
+serde_json = "1.0.111"
