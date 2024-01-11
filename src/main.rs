@@ -61,9 +61,10 @@ fn get_stats() -> Value {
 
 
 fn main() {
+
+    // Daemonize so we can use an OS service manager (i.e. systemd)
 	loop {
         println!("{}", get_stats().to_string());
-        //println!("{}", serde_json::to_string_pretty(&get_stats()).unwrap());
-        thread::sleep(Duration::from_secs(60));
+        thread::sleep(Duration::from_secs(300));
 	}
 }
