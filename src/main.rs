@@ -35,27 +35,30 @@ fn generate_sysinfo() {
     }
 
     let payload = json!({
-        "system": {
-            "hostname": System::host_name(),
-            "os_name": System::name(),
-            "os_kernel_version": System::kernel_version(),
-            "os_version": System::os_version()
-        },
-        "memory": {
-            "mem_total": sys.total_memory(),
-            "swap_total": sys.total_swap()
-        },
-        "cpu": {
-            "num_cpus": sys.cpus().len(),
-            "cpu_name": sys.cpus()[0].name(),
-            "cpu_brand": sys.cpus()[0].brand(),
-            "cpu_frequency": sys.cpus()[0].frequency()
-        },
-        "disks": disks,
-        "network": {
-            "primary_ip": local_ip().unwrap(),
-        },
-        "interfaces": interfaces
+        "sysinfo_data_type": "system_info",
+        "data": {
+            "system": {
+                "hostname": System::host_name(),
+                "os_name": System::name(),
+                "os_kernel_version": System::kernel_version(),
+                "os_version": System::os_version()
+            },
+            "memory": {
+                "mem_total": sys.total_memory(),
+                "swap_total": sys.total_swap()
+            },
+            "cpu": {
+                "num_cpus": sys.cpus().len(),
+                "cpu_name": sys.cpus()[0].name(),
+                "cpu_brand": sys.cpus()[0].brand(),
+                "cpu_frequency": sys.cpus()[0].frequency()
+            },
+            "disks": disks,
+            "network": {
+                "primary_ip": local_ip().unwrap(),
+            },
+            "interfaces": interfaces
+        }
     });
 
     println!("{}", payload.to_string());
@@ -90,7 +93,7 @@ fn generate_process_list() {
 
         let payload = json!({
             "sysinfo_data_type": "process_record",
-            "process": prc
+            "data": prc
         });
 
         println!("{}", payload.to_string());
@@ -105,7 +108,7 @@ fn generate_user_list() {
 
     let payload = json!({
         "sysinfo_data_type": "user_list",
-        "users": users
+        "data": users
     });
 
     println!("{}", payload.to_string());
