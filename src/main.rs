@@ -6,7 +6,6 @@ use std::thread;
 use std::time::Duration;
 use argh::FromArgs;
 
-#[allow(dead_code)]
 fn generate_sysinfo() {
     let mut sys = System::new_all();
     sys.refresh_all();
@@ -64,7 +63,6 @@ fn generate_sysinfo() {
     println!("{}", payload.to_string());
 }
 
-#[allow(dead_code)]
 fn generate_process_list() {
     let sys = System::new_all();
 
@@ -101,7 +99,6 @@ fn generate_process_list() {
 
 }
 
-#[allow(dead_code)]
 fn generate_user_list() {
 
     let mut users: Vec<Value> = Vec::new();
@@ -122,7 +119,6 @@ fn generate_user_list() {
     println!("{}", payload.to_string());
 }
 
-#[allow(dead_code)]
 fn generate_group_list() {
 
     let mut groups: Vec<Value> = Vec::new();
@@ -167,7 +163,11 @@ struct Args {
     /// print list of groups on this system
     #[argh(switch, short = 'g')]
     groups: bool,
-    
+
+    /// do not daemonize; get values once and quit
+    #[argh(switch, short = 'q')]
+    quit: bool,
+
     /// how often to fetch updated info, in seconds
     #[argh(option, short = 'i', default = "300")]
     interval: u64,
@@ -185,6 +185,10 @@ fn main() {
         }
         if args.groups {
             generate_group_list();
+        }
+
+        if args.quit {
+            break;
         }
         
         thread::sleep(Duration::from_secs(args.interval));
