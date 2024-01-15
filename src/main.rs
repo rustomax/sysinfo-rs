@@ -4,7 +4,7 @@ use serde_json::json;
 use serde_json::Value;
 use std::thread;
 use std::time::Duration;
-use clap::{Arg, Command};
+use argh::FromArgs;
 
 #[allow(dead_code)]
 fn generate_sysinfo() {
@@ -111,36 +111,33 @@ fn generate_user_list() {
     println!("{}", payload.to_string());
 }
 
-fn main() {
+#[derive(FromArgs)]
+/// Small helper to get system info and print it to stdout in JSON format
+struct Args {
+    /// print list of running processes
+    #[argh(switch, short = 'p')]
+    processes: bool,
 
-    let matches = Command::new("sysinfo-rs")
-    .version("0.1.0")
-    .author("Max Skybin <max@observeinc.com>")
-    .about("Small helper to get system info and print it to stdout in JSON format")
-    .arg(Arg::new("processes")
-            .short('p')
-            .long("processes")
-            .required(false)
-            .help("Print list of running processes"))
-    .arg(Arg::new("users")
-            .short('u')
-            .long("users")
-            .required(false)
-            .help("Print list of users on this system"))
-    .get_matches();
+    /// print list of users on this system
+    #[argh(switch, short = 'u')]
+    users: bool,
 
-    let processes = matches.get_one::<bool>("processes").unwrap_or(&false);
-    let users = matches.get_one::<bool>("users").unwrap_or(&false);
-
+    /// how often to print updated info, in seconds
+    #[argh(option, short = 'i', default = "300")]
+    interval: u64,
+}
+fn main() { 
 	loop {
+        let args: Args = argh::from_env();
+
         generate_sysinfo();
-        if *processes {
+        if args.processes {
             generate_process_list();
         }
-        if *users {
+        if args.users {
             generate_user_list();
         }
         
-        thread::sleep(Duration::from_secs(300));
+        thread::sleep(Duration::from_secs(args.interval));
 	}
 }
