@@ -1,4 +1,4 @@
-use sysinfo::{Disks, System, Pid};
+use sysinfo::{Disks, System, Pid, Users};
 use local_ip_address::{local_ip, list_afinet_netifas};
 use serde_json::json;
 use serde_json::Value;
@@ -86,9 +86,9 @@ fn generate_process_list() {
             "disk_usage_total_read_bytes": disk_usage.total_read_bytes,
             "disk_usage_written_bytes": disk_usage.written_bytes,
             "disk_usage_total_written_bytes": disk_usage.total_written_bytes,
-            "process_user_id": format!("{:?}", process.user_id().unwrap()),
-            "process_effective_user_id": format!("{:?}", process.effective_user_id().unwrap()),
-            "process_group_id": format!("{:?}", process.group_id().unwrap())
+            "user_id": format!("{:?}", process.user_id().unwrap()),
+            "effective_user_id": format!("{:?}", process.effective_user_id().unwrap()),
+            "group_id": format!("{:?}", process.group_id().unwrap())
         });
 
         let payload = json!({
@@ -104,7 +104,15 @@ fn generate_process_list() {
 #[allow(dead_code)]
 fn generate_user_list() {
 
-    let users: Vec<Value> = Vec::new();
+    let mut users: Vec<Value> = Vec::new();
+
+    let users_arr: Users = Users::new_with_refreshed_list();
+    for user in users_arr.list() {
+        users.push(json!({
+            "user": user.name(),
+            "id": format!("{:?}", user.id()),
+        }));
+    }
 
     let payload = json!({
         "sysinfo_data_type": "user_list",
@@ -114,8 +122,39 @@ fn generate_user_list() {
     println!("{}", payload.to_string());
 }
 
+#[allow(dead_code)]
+fn generate_group_list() {
+
+    let mut groups: Vec<Value> = Vec::new();
+
+    let users_arr: Users = Users::new_with_refreshed_list();
+    for user in users_arr.list() {
+        for group in user.groups() {
+            let group_json = json!({
+                "group": group.name(),
+                "id": format!("{:?}", group.id()),
+            });
+            if !groups.contains(&group_json) {
+                groups.push(group_json);
+            }
+        }
+    }
+
+    //groups.sort_unstable();
+    //groups.dedup();
+
+    let payload = json!({
+        "sysinfo_data_type": "group_list",
+        "data": groups
+    });
+
+    println!("{}", payload.to_string());
+}
+
 #[derive(FromArgs)]
-/// Small helper to get system info and print it to stdout in JSON format
+/// Small helper to get system info and print it to stdout in JSON format.
+/// By default will print sysinfo summary, such as OS version, system name, etc.
+/// Use command line switches to print additional info.
 struct Args {
     /// print list of running processes
     #[argh(switch, short = 'p')]
@@ -125,7 +164,11 @@ struct Args {
     #[argh(switch, short = 'u')]
     users: bool,
 
-    /// how often to print updated info, in seconds
+    /// print list of groups on this system
+    #[argh(switch, short = 'g')]
+    groups: bool,
+    
+    /// how often to fetch updated info, in seconds
     #[argh(option, short = 'i', default = "300")]
     interval: u64,
 }
@@ -139,6 +182,9 @@ fn main() {
         }
         if args.users {
             generate_user_list();
+        }
+        if args.groups {
+            generate_group_list();
         }
         
         thread::sleep(Duration::from_secs(args.interval));
