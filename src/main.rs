@@ -136,9 +136,6 @@ fn generate_group_list() {
         }
     }
 
-    //groups.sort_unstable();
-    //groups.dedup();
-
     let payload = json!({
         "sysinfo_data_type": "group_list",
         "data": groups
