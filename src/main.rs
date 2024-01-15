@@ -1,3 +1,4 @@
+use sysinfo::MINIMUM_CPU_UPDATE_INTERVAL;
 use sysinfo::{Disks, System, Pid, Users};
 use local_ip_address::{local_ip, list_afinet_netifas};
 use serde_json::json;
@@ -6,10 +7,9 @@ use std::thread;
 use std::time::Duration;
 use argh::FromArgs;
 
-fn generate_sysinfo() {
-    let mut sys = System::new_all();
-    sys.refresh_all();
+fn generate_sysinfo(sys: &System) {
 
+    std::thread::sleep(MINIMUM_CPU_UPDATE_INTERVAL);
     let disk_arr = Disks::new_with_refreshed_list();
     let mut disks: Vec<Value> = Vec::new();
 
@@ -63,8 +63,7 @@ fn generate_sysinfo() {
     println!("{}", payload.to_string());
 }
 
-fn generate_process_list() {
-    let sys = System::new_all();
+fn generate_process_list(sys: &System) {
 
     for (_, process) in sys.processes() {
         let disk_usage = process.disk_usage();
@@ -76,7 +75,7 @@ fn generate_process_list() {
             "exe_path": process.exe(),
             "mem_usage_bytes": process.memory(),
             "virt_mem_usage_bytes": process.virtual_memory(),
-            "cpu_usage": process.cpu_usage(),
+            "cpu_usage_percent": process.cpu_usage(),
             "status": format!("{}", process.status()),
             "start_time_seconds": process.start_time(),
             "run_time_seconds": process.run_time(),
@@ -100,9 +99,9 @@ fn generate_process_list() {
 }
 
 fn generate_user_list() {
-
     let mut users: Vec<Value> = Vec::new();
 
+    std::thread::sleep(MINIMUM_CPU_UPDATE_INTERVAL);
     let users_arr: Users = Users::new_with_refreshed_list();
     for user in users_arr.list() {
         users.push(json!({
@@ -120,9 +119,9 @@ fn generate_user_list() {
 }
 
 fn generate_group_list() {
-
     let mut groups: Vec<Value> = Vec::new();
 
+    std::thread::sleep(MINIMUM_CPU_UPDATE_INTERVAL);
     let users_arr: Users = Users::new_with_refreshed_list();
     for user in users_arr.list() {
         for group in user.groups() {
@@ -146,8 +145,8 @@ fn generate_group_list() {
 
 #[derive(FromArgs)]
 /// Small helper to get system info and print it to stdout in JSON format.
-/// By default will print sysinfo summary, such as OS version, system name, etc.
-/// Use command line switches to print additional info.
+/// By default will print basic sysinfo summary, such as OS version, system name, amount of memory, etc.
+/// Use command line switches to fetch additional info.
 struct Args {
     /// print list of running processes
     #[argh(switch, short = 'p')]
@@ -165,7 +164,7 @@ struct Args {
     #[argh(switch, short = 'q')]
     quit: bool,
 
-    /// how often to fetch updated info, in seconds
+    /// how often to fetch updated info, in seconds (default 300s, minimum 15s)
     #[argh(option, short = 'i', default = "300")]
     interval: u64,
 }
@@ -173,9 +172,14 @@ fn main() {
 	loop {
         let args: Args = argh::from_env();
 
-        generate_sysinfo();
+        let mut sys = System::new_all();
+        std::thread::sleep(MINIMUM_CPU_UPDATE_INTERVAL);
+        sys.refresh_all();    
+
+        generate_sysinfo(&sys);
+
         if args.processes {
-            generate_process_list();
+            generate_process_list(&sys);
         }
         if args.users {
             generate_user_list();
@@ -188,6 +192,7 @@ fn main() {
             break;
         }
         
-        thread::sleep(Duration::from_secs(args.interval));
+        // Don't refresh data more often than 15 seconds
+        thread::sleep(Duration::from_secs(if args.interval < 15 {15} else {args.interval}));
 	}
 }
