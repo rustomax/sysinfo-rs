@@ -1,11 +1,13 @@
-use sysinfo::{Disks, System};
+use sysinfo::{Disks, System, Pid};
 use local_ip_address::{local_ip, list_afinet_netifas};
 use serde_json::json;
 use serde_json::Value;
 use std::thread;
 use std::time::Duration;
+use clap::{Arg, Command};
 
-fn get_stats() -> Value {
+#[allow(dead_code)]
+fn generate_sysinfo() {
     let mut sys = System::new_all();
     sys.refresh_all();
 
@@ -56,15 +58,89 @@ fn get_stats() -> Value {
         "interfaces": interfaces
     });
 
-    return payload;
+    println!("{}", payload.to_string());
 }
 
+#[allow(dead_code)]
+fn generate_process_list() {
+    let sys = System::new_all();
+
+    for (_, process) in sys.processes() {
+        let disk_usage = process.disk_usage();
+
+        let prc = json!({
+            "pid": process.pid().as_u32(),
+            "parent": process.parent().unwrap_or(Pid::from_u32(0)).as_u32(),
+            "name": process.name(),
+            "exe_path": process.exe(),
+            "mem_usage_bytes": process.memory(),
+            "virt_mem_usage_bytes": process.virtual_memory(),
+            "cpu_usage": process.cpu_usage(),
+            "status": format!("{}", process.status()),
+            "start_time_sec": process.start_time(),
+            "run_time_sec": process.run_time(),
+            "disk_usage_read_bytes": disk_usage.read_bytes,
+            "disk_usage_total_read_bytes": disk_usage.total_read_bytes,
+            "disk_usage_written_bytes": disk_usage.written_bytes,
+            "disk_usage_total_written_bytes": disk_usage.total_written_bytes,
+            "process_user_id": format!("{:?}", process.user_id().unwrap()),
+            "process_effective_user_id": format!("{:?}", process.effective_user_id().unwrap()),
+            "process_group_id": format!("{:?}", process.group_id().unwrap())
+        });
+
+        let payload = json!({
+            "sysinfo_data_type": "process_record",
+            "process": prc
+        });
+
+        println!("{}", payload.to_string());
+    }
+
+}
+
+#[allow(dead_code)]
+fn generate_user_list() {
+
+    let users: Vec<Value> = Vec::new();
+
+    let payload = json!({
+        "sysinfo_data_type": "user_list",
+        "users": users
+    });
+
+    println!("{}", payload.to_string());
+}
 
 fn main() {
 
-    // Daemonize so we can use an OS service manager (i.e. systemd)
+    let matches = Command::new("sysinfo-rs")
+    .version("0.1.0")
+    .author("Max Skybin <max@observeinc.com>")
+    .about("Small helper to get system info and print it to stdout in JSON format")
+    .arg(Arg::new("processes")
+            .short('p')
+            .long("processes")
+            .required(false)
+            .help("Print list of running processes"))
+    .arg(Arg::new("users")
+            .short('u')
+            .long("users")
+            .required(false)
+            .help("Print list of users on this system"))
+    .get_matches();
+
+    let processes = matches.get_one::<bool>("processes").unwrap_or(&false);
+    let users = matches.get_one::<bool>("users").unwrap_or(&false);
+
 	loop {
-        println!("{}", get_stats().to_string());
+        generate_sysinfo();
+        if *processes {
+            generate_process_list();
+        }
+        if *users {
+            generate_user_list();
+        }
+        
         thread::sleep(Duration::from_secs(300));
 	}
 }

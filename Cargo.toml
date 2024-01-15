@@ -10,3 +10,4 @@ sysinfo = "0.30.5"
 local-ip-address = "0.5.6"
 serde = { version = "1.0.195", features = ["derive"] }
 serde_json = "1.0.111"
+clap = { version = "4.4.16", features = ["derive"] }
