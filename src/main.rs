@@ -8,7 +8,6 @@ use std::time::Duration;
 use argh::FromArgs;
 
 fn generate_sysinfo(sys: &System) {
-
     std::thread::sleep(MINIMUM_CPU_UPDATE_INTERVAL);
     let disk_arr = Disks::new_with_refreshed_list();
     let mut disks: Vec<Value> = Vec::new();
@@ -144,9 +143,17 @@ fn generate_group_list() {
 }
 
 #[derive(FromArgs)]
-/// Small helper to get system info and print it to stdout in JSON format.
-/// By default will print basic sysinfo summary, such as OS version, system name, amount of memory, etc.
-/// Use command line switches to fetch additional info.
+/**
+version 0.1.3
+
+Small helper program to get system info and print it to stdout in JSON format.
+By default will daemonize itself and print basic system information,
+such as OS version, system name, amount of memory, etc.
+Use command line switches to fetch additional info.
+
+Additional documentation and examples can be found at 
+https://github.com/rustomax/sysinfo-rs
+*/
 struct Args {
     /// print list of running processes
     #[argh(switch, short = 'p')]
@@ -187,11 +194,10 @@ fn main() {
         if args.groups {
             generate_group_list();
         }
-
         if args.quit {
             break;
         }
-        
+
         // Don't refresh data more often than 15 seconds
         thread::sleep(Duration::from_secs(if args.interval < 15 {15} else {args.interval}));
 	}
