@@ -32,8 +32,6 @@ Options:
 | Users               | [Data Schema Example](./schemas/users.md)     |
 | Groups              | [Data Schema Example](./schemas/groups.md)    |
 
-```
-
 ## Status
 
 Very early stages of development. Can crash as error-checking is not thorough. Not recommended for production.
