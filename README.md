@@ -8,6 +8,10 @@ Intended to be run via systemd or another wrapper with output being consumed by 
 
 ![Instance Dashboard](./screenshots/instance-dashobard.png)
 
+## Status
+
+Very early stages of development. Can crash as error-checking is not thorough. Not recommended for production.
+
 ## Usage
 
 ```
@@ -32,6 +36,126 @@ Options:
 | Users               | [Data Schema Example](./schemas/users.md)     |
 | Groups              | [Data Schema Example](./schemas/groups.md)    |
 
-## Status
 
-Very early stages of development. Can crash as error-checking is not thorough. Not recommended for production.
+## Compiling and running
+
+```sh
+git clone https://github.com/rustomax/sysinfo-rs.git
+cd sysinfo-rs
+cargo build --release
+
+```
+
+Optionally strip the binary for minimal footprint
+
+```sh
+strip target/release/sysinfo.rs
+```
+
+Optionally move the binary to a path of your choosing, i.e.
+
+```sh
+sudo mv target/release/sysinfo.rs /usr/bin/sysinfo-rs
+sudo chown root.root /usr/bin/sysinfo-rs
+sudo chmod 755 /usr/bin/sysinfo-rs
+```
+
+Run the command. For instance, the following command will print system information summary, and the list of running process statistics and quit without daemonizing itself.
+
+```sh
+sysinfo-rs -p -q
+```
+
+## Usage with Forwarders
+
+sysinfo-rs is intended to be used in conjunction with a service manager, like systemd, and/or a data consumer/forwarder, like Fluentbit or Vector. 
+
+Vector in particular has a feature, where it can start and run a daemon and consume its stdout. Here is a sample Vector config template to start sysinfo-rs as a daemon and consume its output, including system information, list of users, list of groups and list of running processes, at 5-min intervals and forward the JSON data to Observe for further use in datasets, correlations, dashboards and monitors:
+
+```yaml
+sources:
+  host_metrics:
+    type: host_metrics
+    scrape_interval_secs: 60
+    filesystem:
+      mountpoints:
+        excludes:
+          - "*/sys/kernel/debug/tracing"
+          - "/var/snap*"
+          - "/sys*"
+          - "/proc*"
+          - "/snap*"
+          - "/run*"
+          - "/dev*"
+  journald_logs:
+    type: journald
+  sysinfo:
+    type: exec
+    mode: streaming
+    decoding:
+      codec: json
+    command:
+      [ "/usr/bin/observe/sysinfo-rs", "-u", "-p", "-g" ]
+
+transforms:
+  journald_logs_transform:
+    type: remap
+    inputs:
+      - journald_logs
+    source: |-
+      .tags.observe_env = "{{ environment }}"
+      .tags.observe_host = "{{ hostname }}"
+      .tags.observe_datatype = "vector_journald_logs"
+  host_metrics_transform:
+    type: remap
+    inputs:
+      - host_metrics
+    source: |-
+      .tags.observe_env = "{{ environment }}"
+      .tags.observe_host = "{{ hostname }}"
+      .tags.observe_datatype = "vector_host_metrics"
+  sysinfo_transform:
+    type: remap
+    inputs:
+      - sysinfo
+    source: |-
+      .tags.observe_env = "{{ environment }}"
+      .tags.observe_host = "{{ hostname }}"
+      .tags.observe_datatype = "vector_sysinfo"
+
+sinks:
+  observe_metrics:
+    type: prometheus_remote_write
+    inputs:
+      - host_metrics_transform
+    endpoint: >-
+      https://{{ observe_customer }}.collect.observeinc.com/v1/prometheus
+    auth:
+      strategy: bearer
+      token: {{ observe_prom_token }}
+    healthcheck: false
+    request:
+      retry_attempts: 5
+  observe_logs:
+    type: http
+    inputs:
+      - journald_logs_transform
+    encoding:
+      codec: json
+    uri: >-
+      https://{{ observe_customer }}.collect.observeinc.com/v1/http
+    auth:
+      strategy: bearer
+      token: {{ observe_http_token }}
+  observe_sysinfo:
+    type: http
+    inputs:
+      - sysinfo_transform
+    encoding:
+      codec: json
+    uri: >-
+      https://{{ observe_customer }}.collect.observeinc.com/v1/http
+    auth:
+      strategy: bearer
+      token: {{ observe_http_token }}
+```
