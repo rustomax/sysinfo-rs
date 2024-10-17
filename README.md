@@ -49,7 +49,7 @@ cargo build --release
 Optionally strip the binary for minimal footprint
 
 ```sh
-strip target/release/sysinfo.rs
+strip target/release/sysinfo-rs
 ```
 
 Optionally move the binary to a path of your choosing, i.e.
