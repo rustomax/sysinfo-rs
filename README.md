@@ -55,8 +55,8 @@ strip target/release/sysinfo-rs
 Optionally move the binary to a path of your choosing, i.e.
 
 ```sh
-sudo mv target/release/sysinfo.rs /usr/bin/sysinfo-rs
-sudo chown root.root /usr/bin/sysinfo-rs
+sudo mv target/release/sysinfo-rs /usr/bin/sysinfo-rs
+sudo chown root:root /usr/bin/sysinfo-rs
 sudo chmod 755 /usr/bin/sysinfo-rs
 ```
 
